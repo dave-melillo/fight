@@ -17,12 +17,58 @@ export default function HowItWorksPage() {
         </p>
       </header>
 
+      {/* FIGHT Score */}
+      <Card className="mb-8">
+        <CardHeader>
+          <h2 className="text-xl font-semibold">The FIGHT Score (0-100)</h2>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Each fighter gets a composite FIGHT score for every matchup. This is a relative quality
+            rating that factors in their stats, record, and how many betting systems favor them
+            in that specific fight. Higher = stronger pick.
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-center w-16">
+                <div className="text-xs font-medium text-red-600 opacity-70">FIGHT</div>
+                <div className="text-xl font-black text-red-600">75+</div>
+              </div>
+              <span className="text-sm text-muted-foreground">Strong pick - fighter has clear edges</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-center w-16">
+                <div className="text-xs font-medium text-amber-600 opacity-70">FIGHT</div>
+                <div className="text-xl font-black text-amber-600">60-74</div>
+              </div>
+              <span className="text-sm text-muted-foreground">Solid - some edges, worth a look</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1 text-center w-16">
+                <div className="text-xs font-medium text-gray-500 opacity-70">FIGHT</div>
+                <div className="text-xl font-black text-gray-500">&lt;60</div>
+              </div>
+              <span className="text-sm text-muted-foreground">Weak - few advantages in this matchup</span>
+            </div>
+          </div>
+
+          <div className="mt-4 text-xs text-muted-foreground">
+            <strong>What goes into it:</strong> Win rate (25%), finish rate (10%), striking efficiency (10%),
+            defense (10%), system bonuses (+3 per system for, -2 per system against), age adjustment.
+          </div>
+        </CardContent>
+      </Card>
+
       {/* How to Read the Badges */}
       <Card className="mb-8">
         <CardHeader>
-          <h2 className="text-xl font-semibold">Reading the Badges</h2>
+          <h2 className="text-xl font-semibold">Reading the System Badges</h2>
         </CardHeader>
         <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            On the matchup screen, system badges are now grouped under each fighter&apos;s name
+            so you can see exactly who each system favors at a glance.
+          </p>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <Badge className="bg-red-500/20 text-red-700 border border-red-500/30">HIGH</Badge>

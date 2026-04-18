@@ -73,7 +73,7 @@ export interface FightOdds {
   bookmakers: Bookmaker[];
 }
 
-export type SystemId = 'FINISH' | 'AGE' | 'REACH' | 'STYLE' | 'MOMENTUM' | 'ACTIVITY' | 'DEFENSE' | 'PRESSURE';
+export type SystemId = 'FINISH' | 'AGE' | 'REACH' | 'STYLE' | 'MOMENTUM' | 'ACTIVITY' | 'DEFENSE' | 'PRESSURE' | 'UNDERDOG';
 
 export interface SystemResult {
   id: SystemId;

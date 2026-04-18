@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { SystemBadge, FighterStyleBadge } from '@/components/SystemBadge';
 import { getFighter } from '@/data/fighters';
 import { getEvent } from '@/data/events';
+import { calculateFightScore } from '@/lib/systems';
 import { cn } from '@/lib/utils';
 
 function StatBar({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
@@ -59,6 +60,12 @@ export default function FighterPage() {
     s => s.triggered && s.favoredFighter && s.favoredFighter !== fighterId
   ) || [];
 
+  // Calculate FIGHT score
+  const opponent = matchup?.fighter1.id === fighterId ? matchup.fighter2 : matchup?.fighter1;
+  const fightScore = matchup && opponent
+    ? calculateFightScore(fighter, opponent, matchup.systems)
+    : null;
+
   const { record, finishStats, stats } = fighter;
   const totalFights = record.wins + record.losses + record.draws;
   const winPct = totalFights > 0 ? Math.round((record.wins / totalFights) * 100) : 0;
@@ -89,6 +96,29 @@ export default function FighterPage() {
           <Badge variant="secondary">{fighter.country}</Badge>
           <Badge variant="outline">{fighter.stance}</Badge>
         </div>
+
+        {/* FIGHT Score */}
+        {fightScore !== null && (
+          <div className={cn(
+            'mt-4 rounded-lg border p-4 text-center',
+            fightScore >= 75 ? 'bg-red-50 border-red-200' :
+            fightScore >= 60 ? 'bg-amber-50 border-amber-200' :
+            'bg-gray-50 border-gray-200'
+          )}>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">FIGHT Score for this matchup</div>
+            <div className={cn(
+              'text-5xl font-black mt-1',
+              fightScore >= 75 ? 'text-red-600' :
+              fightScore >= 60 ? 'text-amber-600' :
+              'text-gray-500'
+            )}>
+              {fightScore}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {systemsForFighter.length} systems for / {systemsAgainst.length} against
+            </div>
+          </div>
+        )}
 
         {/* Record */}
         <div className="grid grid-cols-4 gap-4 mt-4">

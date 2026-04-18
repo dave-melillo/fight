@@ -240,8 +240,63 @@ function evaluatePressureSystem(matchup: Matchup): SystemResult {
   };
 }
 
+// SYSTEM 9: UNDERDOG VALUE
+// When the underdog has better stats or more systems in their favor
+function evaluateUnderdogSystem(matchup: Matchup, otherSystems: SystemResult[]): SystemResult {
+  const f1Odds = getConsensusOdds(matchup.odds, matchup.fighter1.name);
+  const f2Odds = getConsensusOdds(matchup.odds, matchup.fighter2.name);
+
+  if (f1Odds === null || f2Odds === null) {
+    return {
+      id: 'UNDERDOG',
+      name: 'Underdog Value',
+      triggered: false,
+      description: 'No odds available to identify underdog',
+      confidence: 'LOW',
+    };
+  }
+
+  // Identify underdog (positive odds)
+  const underdogIsF1 = f1Odds > f2Odds;
+  const underdog = underdogIsF1 ? matchup.fighter1 : matchup.fighter2;
+  const favorite = underdogIsF1 ? matchup.fighter2 : matchup.fighter1;
+  const underdogOdds = underdogIsF1 ? f1Odds : f2Odds;
+
+  // Count how many other systems favor the underdog
+  const systemsForUnderdog = otherSystems.filter(s => s.triggered && s.favoredFighter === underdog.id).length;
+  const systemsForFavorite = otherSystems.filter(s => s.triggered && s.favoredFighter === favorite.id).length;
+
+  // Calculate stat edges for the underdog
+  let statEdges = 0;
+  if (underdog.stats.strikingDefense > favorite.stats.strikingDefense) statEdges++;
+  if (underdog.stats.takedownDefense > favorite.stats.takedownDefense) statEdges++;
+  if (underdog.stats.strikingAccuracy > favorite.stats.strikingAccuracy) statEdges++;
+  if (underdog.stats.strikesLandedPerMin > favorite.stats.strikesLandedPerMin) statEdges++;
+  if (underdog.stats.strikesAbsorbedPerMin < favorite.stats.strikesAbsorbedPerMin) statEdges++;
+
+  const underdogWinPct = underdog.record.wins / Math.max(1, underdog.record.wins + underdog.record.losses);
+  const favoriteWinPct = favorite.record.wins / Math.max(1, favorite.record.wins + favorite.record.losses);
+  if (underdogWinPct >= favoriteWinPct) statEdges++;
+
+  // Trigger: underdog has more systems OR has 4+ stat edges while being a dog
+  const triggered = (systemsForUnderdog > systemsForFavorite) || (statEdges >= 4 && underdogOdds > 0);
+  const confidence = (systemsForUnderdog >= 3 && systemsForUnderdog > systemsForFavorite + 1) ? 'HIGH'
+    : triggered ? 'MEDIUM' : 'LOW';
+
+  return {
+    id: 'UNDERDOG',
+    name: 'Underdog Value',
+    triggered,
+    favoredFighter: triggered ? underdog.id : undefined,
+    description: triggered
+      ? `${underdog.name} (${underdogOdds > 0 ? '+' : ''}${underdogOdds}) has ${systemsForUnderdog} systems + ${statEdges} stat edges vs favorite`
+      : `Favorite is justified by stats`,
+    confidence,
+  };
+}
+
 export function evaluateAllSystems(matchup: Matchup): SystemResult[] {
-  return [
+  const coreSystems = [
     evaluateFinishSystem(matchup),
     evaluateAgeSystem(matchup),
     evaluateReachSystem(matchup),
@@ -250,10 +305,49 @@ export function evaluateAllSystems(matchup: Matchup): SystemResult[] {
     evaluateDefenseSystem(matchup),
     evaluatePressureSystem(matchup),
   ];
+  // Underdog system uses other systems' results
+  coreSystems.push(evaluateUnderdogSystem(matchup, coreSystems));
+  return coreSystems;
 }
 
 export function getSystemCount(systems: SystemResult[], fighterId: string): number {
   return systems.filter(s => s.triggered && s.favoredFighter === fighterId).length;
+}
+
+// FIGHT SCORE - composite quality rating per fighter in a matchup (0-100)
+export function calculateFightScore(fighter: Fighter, opponent: Fighter, systems: SystemResult[]): number {
+  let score = 50; // baseline
+
+  // Win rate component (0-25 pts)
+  const winPct = fighter.record.wins / Math.max(1, fighter.record.wins + fighter.record.losses);
+  score += winPct * 25;
+
+  // Finish rate component (0-10 pts)
+  const finishRate = fighter.record.wins > 0
+    ? (fighter.finishStats.koWins + fighter.finishStats.subWins) / fighter.record.wins
+    : 0;
+  score += finishRate * 10;
+
+  // Striking efficiency (0-10 pts): land more, absorb less
+  const strikeDiff = fighter.stats.strikesLandedPerMin - fighter.stats.strikesAbsorbedPerMin;
+  score += Math.max(-5, Math.min(10, strikeDiff * 3));
+
+  // Defense component (0-10 pts)
+  const avgDef = (fighter.stats.strikingDefense + fighter.stats.takedownDefense) / 2;
+  score += (avgDef / 100) * 10;
+
+  // System bonus: +3 per system that favors this fighter
+  const systemsFor = systems.filter(s => s.triggered && s.favoredFighter === fighter.id).length;
+  score += systemsFor * 3;
+
+  // System penalty: -2 per system against
+  const systemsAgainst = systems.filter(s => s.triggered && s.favoredFighter === opponent.id).length;
+  score -= systemsAgainst * 2;
+
+  // Age penalty for fighters over 37
+  if (fighter.age > 37) score -= (fighter.age - 37) * 2;
+
+  return Math.round(Math.max(0, Math.min(100, score)));
 }
 
 export const SYSTEM_DESCRIPTIONS: Record<SystemId, { name: string; emoji: string; description: string }> = {
@@ -296,5 +390,10 @@ export const SYSTEM_DESCRIPTIONS: Record<SystemId, { name: string; emoji: string
     name: 'Volume Striker',
     emoji: '👊',
     description: 'Lands 1.5+ more significant strikes per minute. Higher output fighters control rounds and pile up damage.',
+  },
+  UNDERDOG: {
+    name: 'Underdog Value',
+    emoji: '💰',
+    description: 'Underdog has more systems in their favor than the favorite, or holds 4+ statistical edges despite longer odds. These are value plays where the line may be mispriced.',
   },
 };
